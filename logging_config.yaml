@@ -1,0 +1,87 @@
+# --- START OF FILE logging_config.yaml (Final Final Version) ---
+version: 1
+disable_existing_loggers: false
+
+filters:
+  request_id_filter:
+    (): py_ai_core.core.logging_filters.RequestIDFilter
+
+formatters:
+  console_formatter:
+    format: "%(asctime)s - %(name)s - [%(levelname)s] [%(request_id)s] - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  
+  # ✅✅✅ 使用我们自己的 CustomJsonFormatter ✅✅✅
+  json_formatter:
+    # '()' 指向我们自己写的类
+    (): py_ai_core.core.json_formatter.CustomJsonFormatter
+    # format 仍然需要，它定义了哪些基础字段会被传入
+    format: "%(name)s %(levelname)s %(request_id)s %(message)s"
+    # 我们不再需要 datefmt 和 rename_fields，因为在类里面自己处理了
+    json_ensure_ascii: False
+
+handlers:
+  console_handler:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: console_formatter
+    stream: ext://sys.stdout
+    filters: [request_id_filter]
+  
+  app_file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: json_formatter
+    filename: "logs/app.log"
+    when: "D"
+    interval: 1
+    backupCount: 30
+    encoding: utf8
+    filters: [request_id_filter]
+    # 添加延迟写入，确保日志能及时写入
+    delay: false
+  
+  access_file_handler:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: INFO
+    formatter: json_formatter
+    filename: "logs/access.log"
+    when: "D"
+    interval: 1
+    backupCount: 30
+    encoding: utf8
+    filters: [request_id_filter]
+    # 添加延迟写入，确保日志能及时写入
+    delay: false
+
+loggers:
+  # 主应用日志
+  py_ai_core:
+    level: DEBUG
+    handlers: [console_handler, app_file_handler]
+    propagate: false
+  
+  # 访问日志
+  py_ai_core.access:
+    level: INFO
+    handlers: [console_handler, access_file_handler]
+    propagate: false
+  
+  # SQLAlchemy日志
+  sqlalchemy.engine:
+    level: INFO
+    handlers: [console_handler, app_file_handler]
+    propagate: false
+  
+  # 心跳日志
+  py_ai_core.heartbeat:
+    level: INFO
+    handlers: [console_handler, app_file_handler]
+    propagate: false
+
+# 根日志器配置
+root:
+  level: INFO
+  handlers: [console_handler, app_file_handler]
+
+# --- END OF FILE logging_config.yaml (Final Final Version) ---

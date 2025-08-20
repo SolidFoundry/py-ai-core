@@ -1,0 +1,38 @@
+#.gitignore
+# Python Caches and Byte-code
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+htmlcov/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Log files and directories
+logs/
+*.log

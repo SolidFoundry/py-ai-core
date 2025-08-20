@@ -1,0 +1,22 @@
+# .gitattributes
+# 将所有文本文件设置为自动处理换行符。Git会智能判断。
+* text=auto
+
+# 对于明确需要 LF 换行符的文件（跨平台脚本、配置文件等），强制使用 LF。
+# 这对于 Python, Shell, Dockerfile 等尤其重要。
+*.py eol=lf
+*.sh eol=lf
+.gitignore eol=lf
+.gitattributes eol=lf
+Dockerfile eol=lf
+*.md eol=lf
+*.yml eol=lf
+*.yaml eol=lf
+*.json eol=lf
+
+# 对于明确是二进制文件（图片、编译产物等），告诉 Git 不要动它们。
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary

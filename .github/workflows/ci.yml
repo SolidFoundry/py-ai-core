@@ -1,0 +1,60 @@
+# .github/workflows/ci.yml (V4 - Final Production Version)
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # ✅✅✅ 核心修正：只用这一条命令，安装所有依赖！ ✅✅✅
+        # 它会安装项目本身(.)，以及dev和test两个可选依赖组里的所有包。
+        pip install -e ".[dev,test]"
+    
+    - name: Run tests with pytest
+      env:
+        OPENAI_API_KEY: "test_key_for_ci"
+        OPENAI_API_BASE: "http://localhost:1234/v1"
+        MODEL_NAME: "test_model_for_ci"
+        DATABASE_USER: "myuser" 
+        DATABASE_PASSWORD: "mypassword"
+        DATABASE_HOST: "localhost" #  ✅ 修正：CI环境中没有db服务，应指向localhost
+        DATABASE_PORT: "5432"
+        DATABASE_NAME: "py_ai_core_db_test"
+        TESTING: "true"
+      run: |
+        pytest --cov=py_ai_core --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        fail_ci_if_error: false

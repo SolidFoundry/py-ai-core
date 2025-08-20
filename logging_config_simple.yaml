@@ -1,0 +1,44 @@
+# 简化的日志配置文件
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  simple_formatter:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  
+  json_formatter:
+    (): py_ai_core.core.json_formatter.CustomJsonFormatter
+    format: "%(name)s %(levelname)s %(message)s"
+    json_ensure_ascii: False
+
+handlers:
+  console_handler:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple_formatter
+    stream: ext://sys.stdout
+  
+  file_handler:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: json_formatter
+    filename: "logs/app.log"
+    mode: "a"
+    encoding: "utf8"
+
+loggers:
+  py_ai_core:
+    level: DEBUG
+    handlers: [console_handler, file_handler]
+    propagate: false
+  
+  py_ai_core.access:
+    level: INFO
+    handlers: [console_handler, file_handler]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [console_handler]
+

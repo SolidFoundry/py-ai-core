@@ -1,0 +1,134 @@
+services:
+  # --- 数据库服务 ---
+  db:
+    image: postgres:16-alpine
+    container_name: py-ai-core-db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    # 从 .env 文件中读取变量并设置为容器的环境变量
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+
+    # ✅✅✅ 核心修正：添加了缺失的端口映射 ✅✅✅
+    # 将我们电脑（宿主机）的 5432 端口，映射到容器内部的 5432 端口。
+    # 这样 DBeaver 等外部工具才能连接到它。
+    ports:
+      - "5432:5432"
+
+    healthcheck:
+      # 使用 $$ 来转义，让变量在容器内部被解析
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- 主应用服务 ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: py-ai-core-app
+    restart: unless-stopped
+    environment:
+      # 数据库连接配置
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+
+      # OpenAI API 配置
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      MODEL_NAME: ${MODEL_NAME}
+
+      # 应用配置
+      APP_ENV: ${APP_ENV}
+      DEBUG: ${DEBUG}
+      HOST: ${HOST}
+      PORT: ${PORT}
+
+      # 时区设置
+      TZ: "Asia/Shanghai"
+
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./py_ai_core:/app/py_ai_core # 开发时源码热重载
+      - ./tests:/app/tests # 开发时测试代码热重载
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --- 测试服务 ---
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: py-ai-core-test
+    environment:
+      # 测试环境配置
+      TESTING: "true"
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+
+      # OpenAI API 配置
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      MODEL_NAME: ${MODEL_NAME}
+    volumes:
+      - ./py_ai_core:/app/py_ai_core
+      - ./tests:/app/tests
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - test # 只在需要时启动
+
+  # --- 开发工具服务 ---
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: py-ai-core-dev
+    environment:
+      # 开发环境配置
+      APP_ENV: "development"
+      DEBUG: "true"
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+
+      # OpenAI API 配置
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      MODEL_NAME: ${MODEL_NAME}
+    volumes:
+      - ./py_ai_core:/app/py_ai_core
+      - ./tests:/app/tests
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - dev # 只在需要时启动
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
